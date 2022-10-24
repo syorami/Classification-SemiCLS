@@ -143,7 +143,7 @@ scheduler = dict(
     num_training_steps=524288)
 ema = dict(use=True, pseudo_with_ema=False, decay=0.999)
 amp = dict(use=False, opt_level='O1')
-log = dict(interval=1)
+log = dict(interval=50)
 ckpt = dict(interval=1)
 optimizer = dict(
     type='SGD', lr=0.03, momentum=0.9, weight_decay=0.0005, nesterov=True)

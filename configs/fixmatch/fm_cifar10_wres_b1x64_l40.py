@@ -50,7 +50,7 @@ data = dict(
     # CIFAR10SSL, CIFAR100SSL
     type="CIFAR10SSL",
     num_workers=4,
-    num_labeled=250,
+    num_labeled=40,
     num_classes=num_classes,
     batch_size=64,
     expand_labels=False,
