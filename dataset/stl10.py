@@ -16,10 +16,12 @@ def get_stl10(root, folds, transform_labeled, transform_ulabeled,
     labeled_dataset = STL10(root,
                             "train",
                             folds=folds,
-                            transform=transform_labeled)
+                            transform=transform_labeled,
+                            download=True)
     unlabeled_dataset = STL10(root,
                               "unlabeled",
                               folds=folds,
-                              transform=transform_ulabeled)
+                              transform=transform_ulabeled,
+                              download=True)
     test_dataset = STL10(root, "test", folds=folds, transform=transform_val)
     return labeled_dataset, unlabeled_dataset, test_dataset

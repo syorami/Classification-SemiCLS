@@ -15,6 +15,7 @@ from loss.soft_supconloss import SoftSupConLoss
 
 from .base_trainer import Trainer
 from sklearn.mixture import GaussianMixture
+from torchmetrics.functional.classification import accuracy
 
 
 @torch.no_grad()
@@ -47,10 +48,10 @@ class HyperMatch(Trainer):
         self.loss_u = loss_builder.build(cfg.loss_u)
 
         self.gmm_thr = cfg.gmm_thr        
-        self.low_dim = cfg.low_dim
+        self.low_dim = all_cfg.model.low_dim
 
         self.loss_contrast = SoftSupConLoss(temperature=self.cfg.temperature)
-        self.feat_centroids = torch.zeros((self.num_classes, self.cfg.low_dim), device=self.device)
+        self.feat_centroids = torch.zeros((all_cfg.num_classes, all_cfg.model.low_dim), device=self.device)
 
     def compute_loss(self,
                      data_x,
@@ -79,7 +80,7 @@ class HyperMatch(Trainer):
         
         cat_targets_x = concat_all_gather(targets_x)
         cat_feats_x = concat_all_gather(feats_x)
-        for _cls in cat_feats_x.unique():
+        for _cls in cat_targets_x.unique():
             cur_feat_centroid = cat_feats_x[cat_targets_x == _cls].mean(0).detach()
             self.feat_centroids[_cls] = self.feat_centroids[_cls] * 0.9 + 0.1 * cur_feat_centroid
 
@@ -97,7 +98,7 @@ class HyperMatch(Trainer):
 
         # compute cosine similarity
         cos_sim = lambda f, c: torch.cosine_similarity(f[..., None, :], c[None, ...], dim=2)
-        feat_sims = cos_sim(f_u_w, self.feat_centroids.T)
+        feat_sims = cos_sim(f_u_w, self.feat_centroids)
         feat_labels = feat_sims.argmax(1)
 
         # compute contrastive loss
@@ -122,8 +123,8 @@ class HyperMatch(Trainer):
         cls_idx = gmm_labels[top_var_idx]
         cls_probs = gmm_probs[:, cls_idx]
         
-        sharp_idxs = np.where(cls_probs > self.cfg.gmm_threshold)[0]
-        flat_idxs = np.where(cls_probs <= self.cfg.gmm_threshold)[0]
+        sharp_idxs = np.where(cls_probs > self.cfg.gmm_thr)[0]
+        flat_idxs = np.where(cls_probs <= self.cfg.gmm_thr)[0]
         
         topk_probs, topk_labels = dists.topk(self.cfg.topk, dim=1)
         extend_feats = torch.cat((cat_feats, cat_feats[flat_idxs].repeat(self.cfg.topk - 1, 1, 1)))
@@ -145,11 +146,32 @@ class HyperMatch(Trainer):
             kwargs['SCALER'].scale(loss).backward()
         else:
             loss.backward()
-
+    
         # calculate pseudo label acc
+        no_gts = (targets_u < 0).all()
         targets_u = targets_u.to(self.device)
         right_labels = (p_targets_u == targets_u).float() * mask
         pseudo_label_acc = right_labels.sum() / max(mask.sum(), 1.0)
+        
+        feat_acc = accuracy(feat_labels, targets_u) if not no_gts else 0.
+        dist_acc = accuracy(dists, targets_u) if not no_gts else 0.
+        all_pl_acc = accuracy(p_targets_u, targets_u) if not no_gts else 0.
+        
+        feat_equal_pl = accuracy(feat_labels, p_targets_u)
+        
+        # GMM divide accs
+        if sharp_idxs.shape[0] > 0 and not no_gts:
+            sharp_top1_acc = accuracy(dists[sharp_idxs], targets_u[sharp_idxs])
+            sharp_top2_acc = accuracy(dists[sharp_idxs], targets_u[sharp_idxs], top_k=2)
+        else:
+            sharp_top1_acc = sharp_top2_acc = 0.
+            
+        if flat_idxs.shape[0] > 0 and not no_gts:
+            flat_top1_acc = accuracy(dists[flat_idxs], targets_u[flat_idxs])
+            flat_top2_acc = accuracy(dists[flat_idxs], targets_u[flat_idxs], top_k=2)
+        else:
+            flat_top1_acc = flat_top2_acc = 0.
+            
 
         loss_dict = {
             "loss": loss,
@@ -158,6 +180,14 @@ class HyperMatch(Trainer):
             "loss_contrast": Lcontrast,
             "mask_prob": mask.mean(),
             "pseudo_acc": pseudo_label_acc,
+            "feat_acc": feat_acc,
+            "dist_acc": dist_acc,
+            "all_pl_acc": all_pl_acc,
+            "feat_equal_pl": feat_equal_pl,
+            "sharp_top1_acc": sharp_top1_acc,
+            "sharp_top2_acc": sharp_top2_acc,
+            "flat_top1_acc": flat_top1_acc,
+            "flat_top2_acc": flat_top2_acc
         }
 
         return loss_dict
