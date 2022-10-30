@@ -84,7 +84,7 @@ class HyperMatch(Trainer):
             cur_feat_centroid = cat_feats_x[cat_targets_x == _cls].mean(0).detach()
             self.feat_centroids[_cls] = self.feat_centroids[_cls] * 0.9 + 0.1 * cur_feat_centroid
 
-        Lx = self.loss_x(logits_x, targets_x, reduction='mean')
+        Lx = self.loss_x(logits_x.float(), targets_x, reduction='mean')
         probs_u_w = torch.softmax(logits_u_w.detach() / self.cfg.T, dim=-1)
 
         # pseudo label and scores for u_w

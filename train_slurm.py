@@ -18,6 +18,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from dataset import builder as dataset_builder
+from dataset.MyDataset import RepeatDataset
 from models import builder as model_builder
 from optimizer import builder as optim_builder
 from scheduler import builder as scheduler_builder
@@ -149,9 +150,9 @@ def main():
 
     # make dataset loader
     train_sampler = RandomSampler if args.local_rank == -1 else DistributedSampler
-
+    
     labeled_trainloader, unlabeled_trainloader, test_loader = get_dataloader(
-        cfg, train_sampler, labeled_dataset, unlabeled_dataset, test_dataset)
+        cfg, train_sampler, labeled_dataset, unlabeled_dataset, test_dataset, args)
 
     if args.local_rank not in [-1, 0]:
         torch.distributed.barrier()
@@ -360,22 +361,35 @@ def get_args():
 
 # labeled_trainloader,unlabeled_trainloader,test_loader
 def get_dataloader(cfg, train_sampler, labeled_dataset, unlabeled_dataset,
-                   test_dataset):
+                   test_dataset, args):
+    eval_step = cfg.train.eval_step
+    labeled_bs = cfg.data.batch_size
+    unlabeled_bs = cfg.data.batch_size * cfg.data.mu
+
+    # wrap repeat dataset
+    repeat_labeled_ds = RepeatDataset(
+        labeled_dataset,
+        times=int(eval_step * args.world_size / (len(labeled_dataset) / labeled_bs)) + 1)
+
+    repeat_unlabeled_ds = RepeatDataset(
+        unlabeled_dataset,
+        times=int(eval_step * args.world_size / (len(unlabeled_dataset) / unlabeled_bs)) + 1)
+    
     # prepare labeled_trainloader
-    labeled_trainloader = DataLoader(labeled_dataset,
-                                     sampler=train_sampler(labeled_dataset),
-                                     batch_size=cfg.data.batch_size,
+    labeled_trainloader = DataLoader(repeat_labeled_ds,
+                                     sampler=train_sampler(repeat_labeled_ds),
+                                     batch_size=labeled_bs,
                                      num_workers=cfg.data.num_workers,
-                                     drop_last=True,
-                                     pin_memory=True)
+                                     drop_last=True)
+
     # prepare unlabeled_trainloader
     unlabeled_trainloader = DataLoader(
-        unlabeled_dataset,
-        sampler=train_sampler(unlabeled_dataset),
-        batch_size=cfg.data.batch_size * cfg.data.mu,
+        repeat_unlabeled_ds,
+        sampler=train_sampler(repeat_unlabeled_ds),
+        batch_size=unlabeled_bs,
         num_workers=cfg.data.num_workers,
-        drop_last=True,
-        pin_memory=True)
+        drop_last=True)
+
     # prepare test_loader
     test_loader = DataLoader(test_dataset,
                              sampler=SequentialSampler(test_dataset),
@@ -414,8 +428,6 @@ def train(args, cfg, labeled_trainloader, unlabeled_trainloader, test_loader,
         end = time.time()
         model.train()
         if not args.no_progress:
-            # p_bar = tqdm(range(args.eval_step),
-            #              disable=args.local_rank not in [-1, 0])
             pass
         for batch_idx in range(args.eval_step):
             try:
