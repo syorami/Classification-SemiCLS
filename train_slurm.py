@@ -337,6 +337,7 @@ def get_args():
                         type=str,
                         help='path to latest checkpoint (default: none)')
     parser.add_argument('--seed', default=None, type=int, help="random seed")
+    parser.add_argument('--repeat-len', default=1, type=int, help='length for repeat dataset')
     parser.add_argument('--use_BN',
                         default=False,
                         type=bool,
@@ -366,14 +367,19 @@ def get_dataloader(cfg, train_sampler, labeled_dataset, unlabeled_dataset,
     labeled_bs = cfg.data.batch_size
     unlabeled_bs = cfg.data.batch_size * cfg.data.mu
 
+    labeled_times = int(eval_step * args.world_size * args.repeat_len \
+                        / (len(labeled_dataset) / labeled_bs)) + 1
+    unlabeled_times = int(eval_step * args.world_size * args.repeat_len \
+                          / (len(unlabeled_dataset) / unlabeled_bs)) + 1
+
     # wrap repeat dataset
     repeat_labeled_ds = RepeatDataset(
         labeled_dataset,
-        times=int(eval_step * args.world_size / (len(labeled_dataset) / labeled_bs)) + 1)
+        times=labeled_times)
 
     repeat_unlabeled_ds = RepeatDataset(
         unlabeled_dataset,
-        times=int(eval_step * args.world_size / (len(unlabeled_dataset) / unlabeled_bs)) + 1)
+        times=unlabeled_times)
     
     # prepare labeled_trainloader
     labeled_trainloader = DataLoader(repeat_labeled_ds,

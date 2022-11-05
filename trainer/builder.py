@@ -13,6 +13,10 @@ from .fixmatch_ccssl import FixMatchCCSSL
 from .comatch_ccssl import CoMatchCCSSL
 from .hypermatch import HyperMatch
 
+# ablation study
+from .fixmatch_supcon import FixMatch_SupCon
+from .fixmatch_contra import FixMatch_Contra
+
 # meta archs for all trainers
 meta_archs = {
     "FixMatch": FixMatch,
@@ -20,7 +24,11 @@ meta_archs = {
     "Classifier": Classifier,
     "FixMatchCCSSL": FixMatchCCSSL,
     "CoMatchCCSSL":CoMatchCCSSL,
-    "HyperMatch": HyperMatch
+    "HyperMatch": HyperMatch,
+    
+    # ablation study
+    "FixMatch_SupCon": FixMatch_SupCon,
+    "FixMatch_Contra": FixMatch_Contra
 }
 
 
