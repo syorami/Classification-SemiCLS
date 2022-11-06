@@ -504,10 +504,6 @@ def train(args, cfg, labeled_trainloader, unlabeled_trainloader, test_loader,
                                 iter=args.eval_step,
                                 lr=scheduler.get_last_lr()[0],
                                 desc=meter_desc))
-                    # p_bar.update()
-
-        # if not args.no_progress:
-        #     p_bar.close()
 
         if args.local_rank in [-1, 0]:
             meter_manager.add_to_writer(args.writer, epoch, prefix="train/")
@@ -575,6 +571,7 @@ def test(args, test_loader, model, epoch):
         test_loader = tqdm(test_loader, disable=args.local_rank not in [-1, 0])
 
     with torch.no_grad():
+        predictions = []
         for batch_idx, (inputs, targets) in enumerate(test_loader):
             data_time.update(time.time() - end)
             model.eval()
@@ -605,6 +602,8 @@ def test(args, test_loader, model, epoch):
                         top1=top1.avg,
                         top5=top5.avg,
                     ))
+            predictions.extend(outputs.argmax(1).cpu().tolist())
+
         if not args.no_progress:
             test_loader.close()
 

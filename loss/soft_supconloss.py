@@ -6,6 +6,20 @@ from __future__ import print_function
 import torch
 import torch.nn as nn
 
+import sys, pdb
+class ForkedPdb(pdb.Pdb):
+    """A Pdb subclass that may be used
+    from a forked multiprocessing child
+
+    """
+    def interaction(self, *args, **kwargs):
+        _stdin = sys.stdin
+        try:
+            sys.stdin = open('/dev/stdin')
+            pdb.Pdb.interaction(self, *args, **kwargs)
+        finally:
+            sys.stdin = _stdin
+
 
 class SoftSupConLoss(nn.Module):
     """Supervised Contrastive Learning: https://arxiv.org/pdf/2004.11362.pdf.
@@ -104,7 +118,8 @@ class SoftSupConLoss(nn.Module):
         log_prob = logits - torch.log(exp_logits.sum(1, keepdim=True))
 
         # compute mean of log-likelihood over positive
-        mean_log_prob_pos = (mask * log_prob).sum(1) / mask.sum(1)
+        epsilon = 1e-10
+        mean_log_prob_pos = (mask * log_prob).sum(1) / (mask.sum(1) + epsilon)
 
         # loss
         loss = - (self.temperature / self.base_temperature) * mean_log_prob_pos
@@ -196,7 +211,8 @@ class SupConLoss(nn.Module):
         log_prob = logits - torch.log(exp_logits.sum(1, keepdim=True))
 
         # compute mean of log-likelihood over positive
-        mean_log_prob_pos = (mask * log_prob).sum(1) / mask.sum(1)
+        epsilon = 1e-10
+        mean_log_prob_pos = (mask * log_prob).sum(1) / (mask.sum(1) + epsilon)
 
         # loss
         loss = - (self.temperature / self.base_temperature) * mean_log_prob_pos

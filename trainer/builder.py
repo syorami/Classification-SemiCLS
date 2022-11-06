@@ -16,6 +16,8 @@ from .hypermatch import HyperMatch
 # ablation study
 from .fixmatch_supcon import FixMatch_SupCon
 from .fixmatch_contra import FixMatch_Contra
+from .fixmatch_relax import FixMatch_Relax
+from .fixmatch_relax_reweight import FixMatch_Relax_Reweight
 
 # meta archs for all trainers
 meta_archs = {
@@ -28,7 +30,9 @@ meta_archs = {
     
     # ablation study
     "FixMatch_SupCon": FixMatch_SupCon,
-    "FixMatch_Contra": FixMatch_Contra
+    "FixMatch_Contra": FixMatch_Contra,
+    "FixMatch_Relax": FixMatch_Relax,
+    "FixMatch_Relax_Reweight": FixMatch_Relax_Reweight
 }
 
 
