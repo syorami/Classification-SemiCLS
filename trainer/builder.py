@@ -18,6 +18,7 @@ from .fixmatch_supcon import FixMatch_SupCon
 from .fixmatch_contra import FixMatch_Contra
 from .fixmatch_relax import FixMatch_Relax
 from .fixmatch_relax_reweight import FixMatch_Relax_Reweight
+from .hypercomatch import HyperCoMatch
 
 # meta archs for all trainers
 meta_archs = {
@@ -32,7 +33,8 @@ meta_archs = {
     "FixMatch_SupCon": FixMatch_SupCon,
     "FixMatch_Contra": FixMatch_Contra,
     "FixMatch_Relax": FixMatch_Relax,
-    "FixMatch_Relax_Reweight": FixMatch_Relax_Reweight
+    "FixMatch_Relax_Reweight": FixMatch_Relax_Reweight,
+    "HyperCoMatch": HyperCoMatch
 }
 
 
