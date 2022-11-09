@@ -30,7 +30,7 @@ from utils.log_utils import get_default_logger
 
 from mmcv.runner.dist_utils import init_dist
 
-torch.autograd.set_detect_anomaly(True)
+# torch.autograd.set_detect_anomaly(True)
 
 # global variables
 global logger
@@ -236,7 +236,7 @@ def main():
             model,
             device_ids=[args.local_rank],
             output_device=args.local_rank,
-            find_unused_parameters=True)
+            find_unused_parameters=False)
 
     log_info(cfg, args)
 

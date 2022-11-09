@@ -119,13 +119,16 @@ class HyperMatch(Trainer):
         gmm_probs = gmm.predict_proba(dists_np)
         
         # select sharp cluster
-        _, top_var_idx = dists.var(1).topk(1)
-        cls_idx = gmm_labels[top_var_idx]
+        # _, top_var_idx = dists.var(1).topk(1)
+        # cls_idx = gmm_labels[top_var_idx]
+
+        vars = gmm.means_.var(1)
+        cls_idx = vars.argmax()
         cls_probs = gmm_probs[:, cls_idx]
-        
+
         sharp_idxs = np.where(cls_probs > self.cfg.gmm_thr)[0]
         flat_idxs = np.where(cls_probs <= self.cfg.gmm_thr)[0]
-        
+
         topk_probs, topk_labels = dists.topk(self.cfg.topk, dim=1)
         extend_feats = torch.cat((cat_feats, cat_feats[flat_idxs].repeat(self.cfg.topk - 1, 1, 1)))
         extend_probs = torch.cat((topk_probs[:, 0], topk_probs[flat_idxs][:, 1:].permute(1, 0).reshape(-1)))
