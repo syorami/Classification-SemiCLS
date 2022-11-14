@@ -19,30 +19,28 @@ this file is organized in the form of
 |-other options
 
 """
-train = dict(eval_step=1024,
-             total_steps=1024*512,
-             trainer=dict(type="FixMatchCCSSL",
-                          threshold=0.6,
-                          T=1.,
-                          temperature=0.07,
-                          lambda_u=1., # lambda_u
-                          lambda_contrast=2, # lambda_c
-                          contrast_with_softlabel=True,
-                          contrast_left_out=True,
-                          contrast_with_thresh=0.9, # T_push
-                          loss_x=dict(
-                              type="cross_entropy",
-                              reduction="mean"),
-                          loss_u=dict(
-                              type="cross_entropy",
-                              reduction="none"),
-                          ))
+train = dict(
+    eval_step=1024,
+    total_steps=1024*512,
+    trainer=dict(
+        type="HyperMatch",
+        threshold=0.6,
+        T=1.,
+        topk=2,
+        gmm_thr=0.6,
+        temperature=0.07,
+        lambda_u=1., # lambda_u
+        lambda_contrast=2, # lambda_c
+        loss_x=dict(type="cross_entropy", reduction="mean"),
+        loss_u=dict(type="cross_entropy", reduction="none"),
+    ))
 num_classes = 810
 seed = 1
 
 model = dict(
      type="resnet50",
      low_dim=64,
+     frozen_stage=3,
      num_class=num_classes,
      proj=True,
      width=1,
@@ -58,11 +56,9 @@ data = dict(
     num_workers=5,
     batch_size=16,
     l_anno_file="./data/semi-inat2021/l_train/anno.txt",
-    u_anno_file=
-    "./data/semi-inat2021/u_train/u_train.txt",
+    u_anno_file="./data/semi-inat2021/u_train/u_train.txt",
     v_anno_file="./data/semi-inat2021/val/anno.txt",
     mu=7,
-
     lpipelines=[[
         dict(type="RandomHorizontalFlip", p=0.5),
         dict(type="RandomResizedCrop", size=224, scale=(0.2, 1.0)),
@@ -119,6 +115,8 @@ amp = dict(use=True, opt_level="O1")
 log = dict(interval=50)
 ckpt = dict(interval=1)
 evaluation = dict(eval_both=True)
+
+pretrained = "/mnt/petrelfs/zhoubeitong/code/Classification-SemiCLS/pretrained_models/moco_inat_ep800.pth.tar"
 
 # optimizer
 optimizer = dict(type='SGD', lr=0.03, momentum=0.9, weight_decay=0.001, nesterov=True)

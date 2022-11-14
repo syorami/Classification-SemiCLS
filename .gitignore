@@ -3,3 +3,4 @@ __pycache__
 data/
 workdirs/
 thirdparty/
+pretrained_models/
